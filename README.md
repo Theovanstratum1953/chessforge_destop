@@ -66,5 +66,14 @@ python main.py
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details (if applicable).
 
+## Create an MacOs App
+
+```bash
+pyinstaller --noconsole --onedir --name="ChessForge" \
+--icon="icon/cf_icon.icns" \
+--add-data "engines/stockfish:engines" \
+main.py
+```
+
 ---
 *Developed with love for the chess community.*
