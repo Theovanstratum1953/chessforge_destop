@@ -5,6 +5,7 @@ import logging
 from PyQt6.QtWidgets import QApplication, QMessageBox
 from gui import ChessWindow
 from engine_handler import EngineHandler
+# CRITICAL: We import from your new file
 from database import ChessDatabase
 
 # Set up logging to a file
@@ -34,7 +35,7 @@ def main():
         # 1. Engine
         engine_path = get_resource_path(os.path.join("engines", "stockfish"))
         logging.info(f"Engine path: {engine_path}")
-        
+
         # Ensure executable permissions on macOS/Linux
         if os.path.exists(engine_path) and not os.access(engine_path, os.X_OK):
             logging.info("Setting executable permissions on engine")
@@ -47,29 +48,17 @@ def main():
         except Exception as e:
             logging.error(f"Engine Error: {e}")
             logging.error(traceback.format_exc())
-            # We continue even if engine fails, but maybe we should show a warning
             QMessageBox.warning(None, "Engine Error", f"Could not start Stockfish: {e}")
 
         # 2. Database
-        # Put database in a writable location (User's home directory)
-        db_dir = os.path.join(os.path.expanduser("~"), ".chess_forge")
-        os.makedirs(db_dir, exist_ok=True)
-        db_path = os.path.join(db_dir, "chess_repertoire.db")
-        logging.info(f"Database path: {db_path}")
-
-        # If database doesn't exist in the writable location, copy the bundled one
-        if not os.path.exists(db_path):
-            bundled_db = get_resource_path("chess_repertoire.db")
-            if os.path.exists(bundled_db):
-                logging.info(f"Copying bundled database from {bundled_db}")
-                import shutil
-                shutil.copy2(bundled_db, db_path)
-            else:
-                logging.info("No bundled database found, a new one will be created.")
-
+        logging.info("Initializing Database...")
         try:
-            db = ChessDatabase(db_path)
-            logging.info("Database connected successfully")
+            # --- THE FIX IS HERE ---
+            # We call it WITHOUT arguments.
+            # This allows the class to use its own logic (Documents/ChessForge).
+            db = ChessDatabase()
+            logging.info(f"Database connected at: {db.db_path}")
+
         except Exception as e:
             logging.error(f"Database Error: {e}")
             logging.error(traceback.format_exc())
@@ -89,7 +78,7 @@ def main():
             sys.exit(1)
 
         exit_code = app.exec()
-        
+
         logging.info(f"Exiting with code {exit_code}")
         engine.stop_engine()
         db.close()

@@ -3,15 +3,29 @@ import os
 
 
 class ChessDatabase:
-    def __init__(self, db_name="chess_repertoire.db"):
-        self.db_name = db_name
+    def __init__(self, db_filename="chess_repertoire.db"):
+        # --- HARDCODED DESTINATION: DOCUMENTS ---
+        user_documents = os.path.expanduser("~/Documents")
+        self.data_folder = os.path.join(user_documents, "ChessForge")
+
+        # Create folder if it doesn't exist
+        if not os.path.exists(self.data_folder):
+            os.makedirs(self.data_folder)
+            print(f"Created folder: {self.data_folder}")
+
+        self.db_path = os.path.join(self.data_folder, db_filename)
+
+        print("=" * 40)
+        print(f"   USING DATABASE AT: {self.db_path}")
+        print("=" * 40)
+
         self.conn = None
         self.cursor = None
         self.connect()
         self.create_tables()
 
     def connect(self):
-        self.conn = sqlite3.connect(self.db_name)
+        self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
 
@@ -30,7 +44,6 @@ class ChessDatabase:
         self.cursor.execute("SELECT id FROM positions WHERE fen = ?", (clean_fen,))
         row = self.cursor.fetchone()
         if row: return row['id']
-
         self.cursor.execute("INSERT INTO positions (fen) VALUES (?)", (clean_fen,))
         self.conn.commit()
         return self.cursor.lastrowid
@@ -74,29 +87,17 @@ class ChessDatabase:
         row = self.cursor.fetchone()
         return row['fen'] if row else None
 
-    # --- NEW HELPER FOR SMART BACK BUTTON ---
     def get_parent_fen(self, repertoire_id, current_fen):
-        """Finds the position that occurred immediately before the current one."""
         clean_fen = " ".join(current_fen.split(" ")[:4])
         self.cursor.execute("SELECT id FROM positions WHERE fen = ?", (clean_fen,))
         row = self.cursor.fetchone()
         if not row: return None
-
         current_pos_id = row['id']
-
-        # Find a move in this repertoire that LEADS to this position
-        self.cursor.execute("""
-                            SELECT p.fen
-                            FROM moves m
-                                     JOIN positions p ON m.from_position_id = p.id
-                            WHERE m.repertoire_id = ?
-                              AND m.to_position_id = ? LIMIT 1
-                            """, (repertoire_id, current_pos_id))
-
+        self.cursor.execute(
+            "SELECT p.fen FROM moves m JOIN positions p ON m.from_position_id = p.id WHERE m.repertoire_id = ? AND m.to_position_id = ? LIMIT 1",
+            (repertoire_id, current_pos_id))
         parent = self.cursor.fetchone()
         return parent['fen'] if parent else None
-
-    # ----------------------------------------
 
     def add_move(self, repertoire_id, from_fen, to_fen, uci, comment=""):
         from_id = self.get_or_create_position(from_fen)

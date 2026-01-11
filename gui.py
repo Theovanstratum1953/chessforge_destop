@@ -188,9 +188,14 @@ class ChessWindow(QWidget):
         if self.redo_stack:
             # Normal Redo
             move = self.redo_stack.pop()
+
+            # FIX: Calculate SAN *before* pushing the move
+            san = self.board.san(move)
+
             self.board.push(move)
             self.board_widget.update_board()
-            self.status_label.setText(f"Forward: {self.board.san(move)}")
+            self.status_label.setText(f"Forward: {san}")
+
         elif self.current_repertoire_id:
             # Smart Forward (Database)
             current_fen = self.board.fen()
@@ -200,9 +205,13 @@ class ChessWindow(QWidget):
                 # Play the first move found (Main Line)
                 try:
                     move = chess.Move.from_uci(moves[0]['uci'])
+
+                    # FIX: Calculate SAN *before* pushing the move here too
+                    san = self.board.san(move)
+
                     self.board.push(move)
                     self.board_widget.update_board()
-                    self.status_label.setText(f"Forward (Repo): {self.board.san(move)}")
+                    self.status_label.setText(f"Forward (Repo): {san}")
                 except:
                     pass
 
